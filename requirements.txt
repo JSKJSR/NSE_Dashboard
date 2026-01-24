@@ -1,0 +1,8 @@
+streamlit>=1.40.0
+nsepython>=2.97
+yfinance>=0.2.60
+pandas>=2.0.0
+numpy>=1.24.0
+plotly>=5.15.0
+requests>=2.31.0
+certifi>=2023.0.0

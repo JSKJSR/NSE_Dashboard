@@ -1,0 +1,96 @@
+#!/bin/bash
+# NSE Bias Dashboard Launcher
+# Fetches latest data, starts Streamlit, opens browser.
+# The script stays alive while Streamlit runs (required for macOS .app).
+
+PROJECT_DIR="/Users/shobha/Documents/Python_Learn/NSE_Dashboard"
+VENV_PYTHON="/Users/shobha/Documents/Python_Learn/.venv/bin/python"
+STREAMLIT="/Users/shobha/Documents/Python_Learn/.venv/bin/streamlit"
+PORT=8501
+LOG_FILE="$PROJECT_DIR/logs/launcher.log"
+
+mkdir -p "$PROJECT_DIR/logs"
+
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG_FILE"
+}
+
+cleanup() {
+    log "Received stop signal, shutting down Streamlit..."
+    if [ -n "$STREAMLIT_PID" ] && kill -0 "$STREAMLIT_PID" 2>/dev/null; then
+        kill "$STREAMLIT_PID" 2>/dev/null
+        wait "$STREAMLIT_PID" 2>/dev/null
+    fi
+    rm -f "$PROJECT_DIR/logs/streamlit.pid"
+    log "=== Launcher stopped ==="
+    exit 0
+}
+
+trap cleanup SIGINT SIGTERM SIGHUP
+
+log "=== Launcher started ==="
+
+# Set environment
+export PYTHONPATH="$PROJECT_DIR"
+export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
+
+# Step 1: Fetch latest data
+log "Running daily_runner.py..."
+"$VENV_PYTHON" "$PROJECT_DIR/scheduler/daily_runner.py" >> "$LOG_FILE" 2>&1
+FETCH_STATUS=$?
+if [ $FETCH_STATUS -eq 0 ]; then
+    log "Data fetch completed successfully"
+else
+    log "Data fetch exited with code $FETCH_STATUS (may be weekend/already fetched)"
+fi
+
+# Step 2: Kill any existing Streamlit on this port
+EXISTING_PID=$(lsof -ti :$PORT 2>/dev/null)
+if [ -n "$EXISTING_PID" ]; then
+    log "Killing existing process on port $PORT (PID: $EXISTING_PID)"
+    kill $EXISTING_PID 2>/dev/null
+    sleep 1
+fi
+
+# Step 3: Start Streamlit in background
+log "Starting Streamlit on port $PORT..."
+cd "$PROJECT_DIR"
+"$STREAMLIT" run dashboard/app.py \
+    --server.port=$PORT \
+    --server.headless=true \
+    --browser.gatherUsageStats=false \
+    >> "$LOG_FILE" 2>&1 &
+
+STREAMLIT_PID=$!
+echo $STREAMLIT_PID > "$PROJECT_DIR/logs/streamlit.pid"
+log "Streamlit PID: $STREAMLIT_PID"
+
+# Step 4: Wait for port to be ready
+RETRIES=0
+MAX_RETRIES=20
+while [ $RETRIES -lt $MAX_RETRIES ]; do
+    if lsof -ti :$PORT > /dev/null 2>&1; then
+        log "Port $PORT is ready"
+        break
+    fi
+    RETRIES=$((RETRIES + 1))
+    sleep 0.5
+done
+
+if [ $RETRIES -eq $MAX_RETRIES ]; then
+    log "ERROR: Streamlit did not start within 10 seconds"
+    osascript -e 'display notification "Dashboard failed to start. Check logs." with title "NSE Bias Dashboard"'
+    exit 1
+fi
+
+# Step 5: Open browser
+log "Opening browser..."
+open "http://localhost:$PORT"
+
+osascript -e 'display notification "Dashboard is ready at localhost:'"$PORT"'" with title "NSE Bias Dashboard"'
+log "=== Launcher running (waiting for Streamlit) ==="
+
+# Stay alive — wait for Streamlit process to exit
+# This prevents macOS from reporting the .app as "crashed"
+wait $STREAMLIT_PID
+log "=== Streamlit exited, launcher done ==="
