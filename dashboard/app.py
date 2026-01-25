@@ -284,7 +284,8 @@ with col3:
 
 # --- Indicators Section ---
 st.markdown("---")
-st.subheader("Today's Indicators")
+data_date = latest.get('date', 'N/A')
+st.subheader(f"Indicators — {data_date}")
 ind_col1, ind_col2, ind_col3 = st.columns(3)
 
 with ind_col1:
