@@ -332,10 +332,20 @@ with col1:
 with col2:
     st.markdown(f"**Guidance:** {latest.get('bias_guidance', 'N/A')}")
     data_date = latest.get('date', 'N/A')
-    st.markdown(f"**Data Date:** {data_date}")
-    fetch_ts = latest.get('fetch_timestamp', '')
-    if fetch_ts:
-        st.markdown(f"**Fetched:** {fetch_ts[:19]}")
+    try:
+        data_date_obj = datetime.strptime(data_date, "%Y-%m-%d")
+        data_date_formatted = data_date_obj.strftime("%A, %d %b %Y")
+    except:
+        data_date_formatted = data_date
+    st.markdown(f"**Data Date:** {data_date_formatted}")
+    fetch_ts_raw = latest.get('fetch_timestamp', '')
+    if fetch_ts_raw:
+        try:
+            fetch_dt_main = datetime.fromisoformat(fetch_ts_raw)
+            fetch_formatted = fetch_dt_main.strftime("%d %b %Y, %I:%M:%S %p")
+        except:
+            fetch_formatted = fetch_ts_raw[:19]
+        st.markdown(f"**Fetched:** {fetch_formatted}")
     if data_date != today_str:
         st.info(f"Showing last available data (market may be closed)")
     if latest.get("data_complete") == 0:
@@ -357,9 +367,21 @@ with col3:
     ]
     st.dataframe(pd.DataFrame(breakdown_data), hide_index=True, height=390)
 
+# --- Format fetch timestamp ---
+fetch_ts = latest.get('fetch_timestamp', '')
+if fetch_ts:
+    try:
+        fetch_dt = datetime.fromisoformat(fetch_ts)
+        fetch_time_str = fetch_dt.strftime("%d %b %Y, %I:%M %p")
+    except:
+        fetch_time_str = fetch_ts[:19]
+else:
+    fetch_time_str = "N/A"
+
 # --- Global Market Indicators ---
 st.markdown("---")
 st.subheader("Global & Market Indicators")
+st.caption(f"Fetched: {fetch_time_str}")
 glob_col1, glob_col2, glob_col3, glob_col4 = st.columns(4)
 
 with glob_col1:
@@ -408,6 +430,7 @@ try:
 except:
     formatted_date = data_date
 st.subheader(f"Institutional Indicators — {formatted_date}")
+st.caption(f"Fetched: {fetch_time_str}")
 ind_col1, ind_col2, ind_col3 = st.columns(3)
 
 with ind_col1:
@@ -439,6 +462,7 @@ with ind_col3:
 # --- NIFTY Technical ---
 st.markdown("---")
 st.subheader("NIFTY Technical")
+st.caption(f"Fetched: {fetch_time_str}")
 tech_col1, tech_col2, tech_col3, tech_col4 = st.columns(4)
 
 with tech_col1:
