@@ -35,12 +35,19 @@ def _fetch():
         previous_1_year = fear_greed_data.get("previous_1_year")
 
         # Extract data date from API response
-        timestamp_ms = fear_greed_data.get("timestamp")
-        if timestamp_ms:
+        timestamp_val = fear_greed_data.get("timestamp")
+        fg_data_date = None
+        if timestamp_val:
             from datetime import datetime
-            fg_data_date = datetime.fromtimestamp(timestamp_ms / 1000).strftime("%Y-%m-%d")
-        else:
-            fg_data_date = None
+            try:
+                if isinstance(timestamp_val, (int, float)):
+                    # Millisecond timestamp
+                    fg_data_date = datetime.fromtimestamp(timestamp_val / 1000).strftime("%Y-%m-%d")
+                elif isinstance(timestamp_val, str):
+                    # ISO format string like "2026-01-23T23:59:55+00:00"
+                    fg_data_date = timestamp_val[:10]  # Extract YYYY-MM-DD
+            except Exception:
+                fg_data_date = None
 
         if current_score is None:
             return None
