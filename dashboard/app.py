@@ -158,10 +158,17 @@ st.sidebar.subheader("Data Refresh")
 today_str = datetime.now().strftime("%Y-%m-%d")
 has_today = date_exists(today_str)
 
-if has_today:
-    st.sidebar.success(f"Today's data loaded")
+# Get latest available data date for display
+latest_for_sidebar = get_latest_row()
+if latest_for_sidebar:
+    latest_date = latest_for_sidebar.get('date', 'N/A')
+    if has_today:
+        st.sidebar.success(f"Today's data loaded ({today_str})")
+    else:
+        st.sidebar.info(f"Showing: {latest_date}")
+        st.sidebar.caption("(Today's data not yet available)")
 else:
-    st.sidebar.warning("No data for today")
+    st.sidebar.warning("No data available")
 
 if st.sidebar.button("Fetch Now", type="primary", use_container_width=True):
     try:
@@ -241,8 +248,14 @@ with col1:
 
 with col2:
     st.markdown(f"**Guidance:** {latest.get('bias_guidance', 'N/A')}")
-    st.markdown(f"**Date:** {latest.get('date', 'N/A')}")
-    st.markdown(f"**Updated:** {latest.get('fetch_timestamp', 'N/A')[:19]}")
+    data_date = latest.get('date', 'N/A')
+    st.markdown(f"**Data Date:** {data_date}")
+    fetch_ts = latest.get('fetch_timestamp', '')
+    if fetch_ts:
+        st.markdown(f"**Fetched:** {fetch_ts[:19]}")
+    # Show warning if data is not from today
+    if data_date != today_str:
+        st.info(f"Showing last available data (market may be closed)")
     if latest.get("data_complete") == 0:
         st.warning("Some data sources failed. Bias may be less reliable.")
 
@@ -284,8 +297,13 @@ with col3:
 
 # --- Indicators Section ---
 st.markdown("---")
-data_date = latest.get('date', 'N/A')
-st.subheader(f"Indicators — {data_date}")
+# Format date with weekday for clarity
+try:
+    date_obj = datetime.strptime(data_date, "%Y-%m-%d")
+    formatted_date = date_obj.strftime("%A, %d %b %Y")  # e.g., "Friday, 23 Jan 2026"
+except:
+    formatted_date = data_date
+st.subheader(f"Indicators — {formatted_date}")
 ind_col1, ind_col2, ind_col3 = st.columns(3)
 
 with ind_col1:
