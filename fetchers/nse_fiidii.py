@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from nsepython import nse_fiidii
 
 logger = logging.getLogger(__name__)
@@ -17,8 +18,19 @@ def _fetch():
         cash = df
 
     result = {}
+    nse_date = None
+
     for _, row in cash.iterrows():
         cat = row.get("category", "")
+        # Extract date from NSE response (format: "23-Jan-2026")
+        if nse_date is None and "date" in row:
+            try:
+                date_str = row["date"]
+                parsed = datetime.strptime(date_str, "%d-%b-%Y")
+                nse_date = parsed.strftime("%Y-%m-%d")
+            except (ValueError, TypeError):
+                pass
+
         if "FII" in cat or "FPI" in cat:
             result["fii_buy"] = float(row.get("buyValue", 0))
             result["fii_sell"] = float(row.get("sellValue", 0))
@@ -30,6 +42,10 @@ def _fetch():
 
     if "fii_net" not in result:
         return None
+
+    # Include the actual data date from NSE
+    if nse_date:
+        result["nse_data_date"] = nse_date
 
     return result
 

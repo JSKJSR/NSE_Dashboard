@@ -72,6 +72,12 @@ def run_daily(target_date: datetime = None):
     fiidii = fetch_fiidii()
     if fiidii:
         raw.update(fiidii)
+        # Use the actual data date from NSE if available
+        nse_date = fiidii.get("nse_data_date")
+        if nse_date:
+            raw["date"] = nse_date
+            date_str = nse_date
+            logger.info(f"Using NSE data date: {nse_date}")
         insert_fetch_log(date_str, "fiidii", "success")
         logger.info(f"FII/DII: FII net={fiidii.get('fii_net')}, DII net={fiidii.get('dii_net')}")
     else:
@@ -79,8 +85,13 @@ def run_daily(target_date: datetime = None):
         insert_fetch_log(date_str, "fiidii", "failed", error_message="All retries exhausted")
         logger.warning("FII/DII fetch failed")
 
-    # 2. Futures OI
-    oi_date_str = target_date.strftime("%d%m%Y")
+    # Check if this date already exists (after getting actual NSE date)
+    if date_exists(date_str):
+        logger.info(f"{date_str} already processed. Skipping.")
+        return
+
+    # 2. Futures OI - use the NSE data date
+    oi_date_str = datetime.strptime(date_str, "%Y-%m-%d").strftime("%d%m%Y")
     futures = fetch_futures_oi(oi_date_str)
     if futures:
         raw.update(futures)

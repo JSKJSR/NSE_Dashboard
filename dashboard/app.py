@@ -55,13 +55,19 @@ def fetch_and_store_data():
         fiidii = fetch_fiidii()
         if fiidii:
             raw.update(fiidii)
-            status_messages.append(f"FII/DII: FII={fiidii.get('fii_net'):,.0f} Cr")
+            # Use the actual data date from NSE if available
+            nse_date = fiidii.get("nse_data_date")
+            if nse_date:
+                raw["date"] = nse_date
+                date_str = nse_date
+            status_messages.append(f"FII/DII: FII={fiidii.get('fii_net'):,.0f} Cr ({nse_date or 'today'})")
         else:
             data_complete = 0
             status_messages.append("FII/DII: Failed")
 
     with st.spinner("Fetching Futures OI..."):
-        oi_date_str = today.strftime("%d%m%Y")
+        # Use the NSE data date for futures OI lookup
+        oi_date_str = datetime.strptime(date_str, "%Y-%m-%d").strftime("%d%m%Y")
         futures = fetch_futures_oi(oi_date_str)
         if futures:
             raw.update(futures)
