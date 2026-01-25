@@ -20,14 +20,14 @@ def _fetch():
     prev_prev_close = closes.iloc[-2]
     change_pct = ((prev_close - prev_prev_close) / prev_prev_close) * 100
 
-    # Get data timestamp from index
+    # Get data date from index (the actual trading day)
     data_timestamp = hist.index[-1]
-    data_ts_str = data_timestamp.strftime("%Y-%m-%d %H:%M:%S") if hasattr(data_timestamp, 'strftime') else str(data_timestamp)
+    data_date = data_timestamp.strftime("%Y-%m-%d") if hasattr(data_timestamp, 'strftime') else str(data_timestamp)[:10]
 
     return {
         "sp500_close": float(prev_close),
         "sp500_change_pct": round(float(change_pct), 2),
-        "sp500_data_ts": data_ts_str,
+        "sp500_data_date": data_date,
     }
 
 

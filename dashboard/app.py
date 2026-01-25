@@ -197,13 +197,13 @@ def fetch_and_store_data():
         "fear_greed_score": raw.get("fear_greed_score"),
         "fear_greed_rating": raw.get("fear_greed_rating"),
         "fear_greed_signal": raw.get("fear_greed_signal"),
-        # Data source timestamps
-        "sp500_data_ts": raw.get("sp500_data_ts"),
-        "us_data_ts": raw.get("us_data_ts"),
-        "nifty_data_ts": raw.get("nifty_data_ts"),
-        "gift_data_ts": raw.get("gift_data_ts"),
-        "fg_data_ts": raw.get("fg_data_ts"),
-        "vix_data_ts": raw.get("vix_data_ts"),
+        # Data source dates (actual trading day of the data)
+        "sp500_data_date": raw.get("sp500_data_date"),
+        "us_data_date": raw.get("us_data_date"),
+        "nifty_data_date": raw.get("nifty_data_date"),
+        "gift_data_date": raw.get("gift_data_date"),
+        "fg_data_date": raw.get("fg_data_date"),
+        "vix_data_date": raw.get("vix_data_date"),
         # Computed features
         "fii_zscore": features.get("fii_zscore"),
         "fii_surprise": features.get("fii_surprise"),
@@ -374,29 +374,24 @@ with col3:
     ]
     st.dataframe(pd.DataFrame(breakdown_data), hide_index=True, height=390)
 
-# --- Helper function to format data timestamps ---
-def format_data_ts(ts_str):
-    """Format a data timestamp string for display."""
-    if not ts_str:
+# --- Helper function to format data dates ---
+def format_data_date(date_str):
+    """Format a data date string (YYYY-MM-DD) for display."""
+    if not date_str:
         return "N/A"
     try:
-        # Handle both datetime and date-only formats
-        if " " in ts_str:
-            dt = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
-            return dt.strftime("%d %b %Y, %I:%M %p")
-        else:
-            dt = datetime.strptime(ts_str, "%Y-%m-%d")
-            return dt.strftime("%d %b %Y")
+        dt = datetime.strptime(date_str[:10], "%Y-%m-%d")
+        return dt.strftime("%d %b %Y")
     except:
-        return ts_str[:19] if len(ts_str) > 19 else ts_str
+        return date_str
 
 # --- Global Market Indicators ---
 st.markdown("---")
 st.subheader("Global & Market Indicators")
-# Show data timestamps for global indicators
-us_ts = format_data_ts(latest.get("us_data_ts"))
-fg_ts = format_data_ts(latest.get("fg_data_ts"))
-st.caption(f"US Markets: {us_ts} | Fear & Greed: {fg_ts}")
+# Show data dates for global indicators
+us_date = format_data_date(latest.get("us_data_date"))
+fg_date = format_data_date(latest.get("fg_data_date"))
+st.caption(f"US Markets: {us_date} | Fear & Greed: {fg_date}")
 glob_col1, glob_col2, glob_col3, glob_col4 = st.columns(4)
 
 with glob_col1:
@@ -445,10 +440,10 @@ try:
 except:
     formatted_date = data_date
 st.subheader(f"Institutional Indicators — {formatted_date}")
-# Show data timestamps for institutional indicators
-vix_ts = format_data_ts(latest.get("vix_data_ts"))
-sp500_ts = format_data_ts(latest.get("sp500_data_ts"))
-st.caption(f"NSE Data: {formatted_date} | VIX: {vix_ts} | S&P 500: {sp500_ts}")
+# Show data dates for institutional indicators
+vix_date = format_data_date(latest.get("vix_data_date"))
+sp500_date = format_data_date(latest.get("sp500_data_date"))
+st.caption(f"NSE Data: {formatted_date} | VIX: {vix_date} | S&P 500: {sp500_date}")
 ind_col1, ind_col2, ind_col3 = st.columns(3)
 
 with ind_col1:
@@ -480,8 +475,8 @@ with ind_col3:
 # --- NIFTY Technical ---
 st.markdown("---")
 st.subheader("NIFTY Technical")
-nifty_ts = format_data_ts(latest.get("nifty_data_ts"))
-st.caption(f"Data as of: {nifty_ts}")
+nifty_date = format_data_date(latest.get("nifty_data_date"))
+st.caption(f"Data as of: {nifty_date}")
 tech_col1, tech_col2, tech_col3, tech_col4 = st.columns(4)
 
 with tech_col1:

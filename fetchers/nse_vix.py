@@ -10,9 +10,9 @@ def _fetch():
     vix = indiavix()
     if vix is None:
         return None
-    # NSE VIX is real-time, use fetch time as data timestamp
-    vix_data_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    return {"vix": float(vix), "vix_data_ts": vix_data_ts}
+    # NSE VIX is real-time, data date is today
+    vix_data_date = datetime.now().strftime("%Y-%m-%d")
+    return {"vix": float(vix), "vix_data_date": vix_data_date}
 
 
 def fetch_vix():

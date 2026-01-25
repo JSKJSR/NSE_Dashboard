@@ -23,9 +23,9 @@ def _fetch():
     highs = hist["High"].values
     lows = hist["Low"].values
 
-    # Get data timestamp from index
+    # Get data date from index (the actual trading day)
     data_timestamp = hist.index[-1]
-    nifty_data_ts = data_timestamp.strftime("%Y-%m-%d %H:%M:%S") if hasattr(data_timestamp, 'strftime') else str(data_timestamp)
+    nifty_data_date = data_timestamp.strftime("%Y-%m-%d") if hasattr(data_timestamp, 'strftime') else str(data_timestamp)[:10]
 
     # Current price
     current_price = float(closes[-1])
@@ -102,7 +102,7 @@ def _fetch():
         "nifty_trend_score": trend_score,
         "nifty_support": round(support_1, 2),
         "nifty_resistance": round(resistance_1, 2),
-        "nifty_data_ts": nifty_data_ts,
+        "nifty_data_date": nifty_data_date,
     }
 
 

@@ -34,13 +34,13 @@ def _fetch():
         previous_1_month = fear_greed_data.get("previous_1_month")
         previous_1_year = fear_greed_data.get("previous_1_year")
 
-        # Extract timestamp from API response
+        # Extract data date from API response
         timestamp_ms = fear_greed_data.get("timestamp")
         if timestamp_ms:
             from datetime import datetime
-            fg_data_ts = datetime.fromtimestamp(timestamp_ms / 1000).strftime("%Y-%m-%d %H:%M:%S")
+            fg_data_date = datetime.fromtimestamp(timestamp_ms / 1000).strftime("%Y-%m-%d")
         else:
-            fg_data_ts = None
+            fg_data_date = None
 
         if current_score is None:
             return None
@@ -70,7 +70,7 @@ def _fetch():
             "fear_greed_1w_ago": float(previous_1_week) if previous_1_week else None,
             "fear_greed_1m_ago": float(previous_1_month) if previous_1_month else None,
             "fear_greed_signal": signal,  # -1 = contrarian buy, +1 = contrarian sell
-            "fg_data_ts": fg_data_ts,
+            "fg_data_date": fg_data_date,
         }
 
     except Exception as e:
