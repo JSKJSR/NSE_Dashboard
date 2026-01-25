@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS daily_data (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date TEXT UNIQUE NOT NULL,
 
-    -- Raw fetched data
+    -- Raw fetched data (FII/DII)
     fii_buy REAL,
     fii_sell REAL,
     fii_net REAL,
@@ -11,18 +11,46 @@ CREATE TABLE IF NOT EXISTS daily_data (
     dii_sell REAL,
     dii_net REAL,
 
+    -- Futures OI
     fii_long_oi INTEGER,
     fii_short_oi INTEGER,
     fii_net_oi INTEGER,
 
+    -- Options / PCR
     pcr REAL,
     total_ce_oi INTEGER,
     total_pe_oi INTEGER,
 
+    -- VIX
     vix REAL,
 
+    -- S&P 500
     sp500_close REAL,
     sp500_change_pct REAL,
+
+    -- GIFT Nifty / Pre-market
+    gift_nifty REAL,
+    gift_gap_pct REAL,
+    gift_sentiment TEXT,
+
+    -- US Markets
+    us_sentiment TEXT,
+    us_avg_chg REAL,
+    dow_chg REAL,
+    nasdaq_chg REAL,
+
+    -- NIFTY Trend
+    nifty_price REAL,
+    nifty_5d_chg REAL,
+    nifty_20d_chg REAL,
+    nifty_rsi REAL,
+    nifty_trend TEXT,
+    nifty_trend_score INTEGER,
+
+    -- Fear & Greed
+    fear_greed_score REAL,
+    fear_greed_rating TEXT,
+    fear_greed_signal INTEGER,
 
     -- Computed features
     fii_zscore REAL,
@@ -45,6 +73,26 @@ CREATE TABLE IF NOT EXISTS daily_data (
     created_at TEXT DEFAULT (datetime('now'))
 );
 """
+
+# Migration: Add new columns to existing table
+MIGRATION_NEW_COLUMNS = [
+    ("gift_nifty", "REAL"),
+    ("gift_gap_pct", "REAL"),
+    ("gift_sentiment", "TEXT"),
+    ("us_sentiment", "TEXT"),
+    ("us_avg_chg", "REAL"),
+    ("dow_chg", "REAL"),
+    ("nasdaq_chg", "REAL"),
+    ("nifty_price", "REAL"),
+    ("nifty_5d_chg", "REAL"),
+    ("nifty_20d_chg", "REAL"),
+    ("nifty_rsi", "REAL"),
+    ("nifty_trend", "TEXT"),
+    ("nifty_trend_score", "INTEGER"),
+    ("fear_greed_score", "REAL"),
+    ("fear_greed_rating", "TEXT"),
+    ("fear_greed_signal", "INTEGER"),
+]
 
 SCHEMA_FETCH_LOG = """
 CREATE TABLE IF NOT EXISTS fetch_log (
