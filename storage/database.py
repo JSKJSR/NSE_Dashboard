@@ -23,17 +23,27 @@ def init_db():
 
 def _migrate_add_columns(conn):
     """Add new columns to existing table if they don't exist."""
-    # Get existing columns
+    # Get existing columns - use index access for PRAGMA results
     cursor = conn.execute("PRAGMA table_info(daily_data)")
-    existing_cols = {row[1] for row in cursor.fetchall()}
+    rows = cursor.fetchall()
+    # PRAGMA table_info returns: cid, name, type, notnull, dflt_value, pk
+    # Access by index [1] for name, works with both Row and tuple
+    existing_cols = set()
+    for row in rows:
+        try:
+            col_name = row["name"] if hasattr(row, "keys") else row[1]
+            existing_cols.add(col_name)
+        except (KeyError, IndexError):
+            continue
 
     # Add missing columns
     for col_name, col_type in MIGRATION_NEW_COLUMNS:
         if col_name not in existing_cols:
             try:
                 conn.execute(f"ALTER TABLE daily_data ADD COLUMN {col_name} {col_type}")
-            except sqlite3.OperationalError:
-                pass  # Column already exists
+            except sqlite3.OperationalError as e:
+                # Column might already exist or other error
+                pass
 
 
 @contextmanager

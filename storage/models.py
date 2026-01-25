@@ -67,6 +67,14 @@ CREATE TABLE IF NOT EXISTS daily_data (
     bias_label TEXT,
     bias_guidance TEXT,
 
+    -- Data source dates
+    sp500_data_date TEXT,
+    us_data_date TEXT,
+    nifty_data_date TEXT,
+    gift_data_date TEXT,
+    fg_data_date TEXT,
+    vix_data_date TEXT,
+
     -- Metadata
     fetch_timestamp TEXT,
     data_complete INTEGER DEFAULT 1,
