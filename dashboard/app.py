@@ -8,6 +8,7 @@ Run with:
 
 import sys
 from pathlib import Path
+from datetime import datetime
 
 # Ensure project root is on path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -17,7 +18,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from storage.database import init_db
-from storage.queries import get_latest_row, get_last_n_days
+from storage.queries import get_latest_row, get_last_n_days, date_exists
 
 # --- Page Config ---
 st.set_page_config(
@@ -29,6 +30,117 @@ st.set_page_config(
 # Initialize DB (creates tables if needed)
 init_db()
 
+
+# --- Data Fetch Function ---
+def fetch_and_store_data():
+    """Run the daily data fetch pipeline."""
+    from fetchers.nse_fiidii import fetch_fiidii
+    from fetchers.nse_futures_oi import fetch_futures_oi
+    from fetchers.nse_option_chain import fetch_option_chain_pcr
+    from fetchers.nse_vix import fetch_vix
+    from fetchers.sp500 import fetch_sp500
+    from core.features import compute_features
+    from core.bias_engine import compute_bias
+    from storage.queries import insert_daily_row, get_last_n_rows
+
+    today = datetime.now()
+    date_str = today.strftime("%Y-%m-%d")
+
+    data_complete = 1
+    raw = {"date": date_str}
+    status_messages = []
+
+    # Fetch all sources
+    with st.spinner("Fetching FII/DII data..."):
+        fiidii = fetch_fiidii()
+        if fiidii:
+            raw.update(fiidii)
+            status_messages.append(f"FII/DII: FII={fiidii.get('fii_net'):,.0f} Cr")
+        else:
+            data_complete = 0
+            status_messages.append("FII/DII: Failed")
+
+    with st.spinner("Fetching Futures OI..."):
+        oi_date_str = today.strftime("%d%m%Y")
+        futures = fetch_futures_oi(oi_date_str)
+        if futures:
+            raw.update(futures)
+            status_messages.append(f"Futures OI: {futures.get('fii_net_oi'):,}")
+        else:
+            data_complete = 0
+            status_messages.append("Futures OI: Failed")
+
+    with st.spinner("Fetching Option Chain PCR..."):
+        pcr_data = fetch_option_chain_pcr()
+        if pcr_data:
+            raw.update(pcr_data)
+            status_messages.append(f"PCR: {pcr_data.get('pcr'):.3f}")
+        else:
+            data_complete = 0
+            status_messages.append("PCR: Failed (market may be closed)")
+
+    with st.spinner("Fetching VIX..."):
+        vix_data = fetch_vix()
+        if vix_data:
+            raw.update(vix_data)
+            status_messages.append(f"VIX: {vix_data.get('vix'):.2f}")
+        else:
+            data_complete = 0
+            status_messages.append("VIX: Failed")
+
+    with st.spinner("Fetching S&P 500..."):
+        sp500 = fetch_sp500()
+        if sp500:
+            raw.update(sp500)
+            status_messages.append(f"S&P 500: {sp500.get('sp500_change_pct'):+.2f}%")
+        else:
+            raw["sp500_close"] = None
+            raw["sp500_change_pct"] = 0.0
+            status_messages.append("S&P 500: Failed (using neutral)")
+
+    # Compute features and bias
+    with st.spinner("Computing bias..."):
+        history = get_last_n_rows(20)
+        features = compute_features(raw, history)
+        score, label, guidance = compute_bias(features, raw)
+
+    # Store
+    row = {
+        "date": date_str,
+        "fii_buy": raw.get("fii_buy"),
+        "fii_sell": raw.get("fii_sell"),
+        "fii_net": raw.get("fii_net"),
+        "dii_buy": raw.get("dii_buy"),
+        "dii_sell": raw.get("dii_sell"),
+        "dii_net": raw.get("dii_net"),
+        "fii_long_oi": raw.get("fii_long_oi"),
+        "fii_short_oi": raw.get("fii_short_oi"),
+        "fii_net_oi": raw.get("fii_net_oi"),
+        "pcr": raw.get("pcr"),
+        "total_ce_oi": raw.get("total_ce_oi"),
+        "total_pe_oi": raw.get("total_pe_oi"),
+        "vix": raw.get("vix"),
+        "sp500_close": raw.get("sp500_close"),
+        "sp500_change_pct": raw.get("sp500_change_pct"),
+        "fii_zscore": features.get("fii_zscore"),
+        "fii_surprise": features.get("fii_surprise"),
+        "dii_surprise": features.get("dii_surprise"),
+        "futures_direction": features.get("futures_direction"),
+        "pcr_change": features.get("pcr_change"),
+        "vix_flag": features.get("vix_flag"),
+        "global_risk_flag": features.get("global_risk_flag"),
+        "sp500_direction": features.get("sp500_direction"),
+        "bias_score": score,
+        "bias_label": label,
+        "bias_guidance": guidance,
+        "fetch_timestamp": datetime.now().isoformat(),
+        "data_complete": data_complete,
+    }
+    insert_daily_row(row)
+
+    return score, label, status_messages, data_complete
+
+
 # --- Sidebar ---
 st.sidebar.title("Settings")
 refresh_seconds = st.sidebar.selectbox(
@@ -38,6 +150,28 @@ refresh_seconds = st.sidebar.selectbox(
     index=0,
 )
 chart_days = st.sidebar.slider("Chart history (days)", 7, 90, 30)
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("Data Refresh")
+
+# Check if today's data exists
+today_str = datetime.now().strftime("%Y-%m-%d")
+has_today = date_exists(today_str)
+
+if has_today:
+    st.sidebar.success(f"Today's data loaded")
+else:
+    st.sidebar.warning("No data for today")
+
+if st.sidebar.button("Fetch Now", type="primary", use_container_width=True):
+    try:
+        score, label, messages, complete = fetch_and_store_data()
+        st.sidebar.success(f"Fetched! Bias: {score:+d} ({label})")
+        for msg in messages:
+            st.sidebar.caption(msg)
+        st.rerun()
+    except Exception as e:
+        st.sidebar.error(f"Fetch failed: {e}")
 
 if refresh_seconds > 0:
     st.rerun()
@@ -71,10 +205,19 @@ st.title("NIFTY Daily Institutional Bias Dashboard")
 latest = get_latest_row()
 
 if latest is None:
-    st.warning(
-        "No data available yet. Run the daily runner first:\n\n"
-        "```\npython scheduler/daily_runner.py\n```"
-    )
+    st.warning("No data available yet.")
+    st.info("Click **Fetch Now** in the sidebar to load today's data, or run locally:\n\n```\npython scheduler/daily_runner.py\n```")
+
+    # Also show a big fetch button in main area for convenience
+    if st.button("Fetch Data Now", type="primary"):
+        try:
+            score, label, messages, complete = fetch_and_store_data()
+            st.success(f"Data fetched! Bias: {score:+d} ({label})")
+            for msg in messages:
+                st.caption(msg)
+            st.rerun()
+        except Exception as e:
+            st.error(f"Fetch failed: {e}")
     st.stop()
 
 # --- Current Bias Display ---
