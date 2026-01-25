@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from nsepython import indiavix
 
 logger = logging.getLogger(__name__)
@@ -9,7 +10,9 @@ def _fetch():
     vix = indiavix()
     if vix is None:
         return None
-    return {"vix": float(vix)}
+    # NSE VIX is real-time, use fetch time as data timestamp
+    vix_data_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return {"vix": float(vix), "vix_data_ts": vix_data_ts}
 
 
 def fetch_vix():

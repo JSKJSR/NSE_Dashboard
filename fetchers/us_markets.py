@@ -75,6 +75,16 @@ def _fetch():
         results["us_sentiment"] = sentiment
         results["us_avg_chg"] = round(avg_change, 2)
 
+    # Get data timestamp from S&P 500 (most reliable)
+    try:
+        t = yf.Ticker("^GSPC")
+        hist = t.history(period="2d")
+        if not hist.empty:
+            data_timestamp = hist.index[-1]
+            results["us_data_ts"] = data_timestamp.strftime("%Y-%m-%d %H:%M:%S") if hasattr(data_timestamp, 'strftime') else str(data_timestamp)
+    except Exception:
+        pass
+
     return results
 
 

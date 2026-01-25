@@ -92,6 +92,13 @@ MIGRATION_NEW_COLUMNS = [
     ("fear_greed_score", "REAL"),
     ("fear_greed_rating", "TEXT"),
     ("fear_greed_signal", "INTEGER"),
+    # Data source timestamps
+    ("sp500_data_ts", "TEXT"),
+    ("us_data_ts", "TEXT"),
+    ("nifty_data_ts", "TEXT"),
+    ("gift_data_ts", "TEXT"),
+    ("fg_data_ts", "TEXT"),
+    ("vix_data_ts", "TEXT"),
 ]
 
 SCHEMA_FETCH_LOG = """

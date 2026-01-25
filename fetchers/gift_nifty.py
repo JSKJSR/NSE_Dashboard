@@ -30,6 +30,10 @@ def _fetch():
 
     nifty_close = float(nifty_hist["Close"].iloc[-1])
 
+    # Get data timestamp
+    nifty_ts = nifty_hist.index[-1]
+    gift_data_ts = nifty_ts.strftime("%Y-%m-%d %H:%M:%S") if hasattr(nifty_ts, 'strftime') else str(nifty_ts)
+
     # Get US market changes (cash indices are more reliable than futures on weekends)
     us_changes = []
 
@@ -57,6 +61,7 @@ def _fetch():
             "gift_gap_pct": 0.0,
             "gift_sentiment": "Neutral",
             "global_avg_chg": 0.0,
+            "gift_data_ts": gift_data_ts,
         }
 
     # Average US market change
@@ -83,6 +88,7 @@ def _fetch():
         "gift_gap_pct": round(estimated_gap_pct, 2),
         "gift_sentiment": sentiment,
         "global_avg_chg": round(avg_us_change, 2),
+        "gift_data_ts": gift_data_ts,
     }
 
 

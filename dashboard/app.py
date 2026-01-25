@@ -197,6 +197,13 @@ def fetch_and_store_data():
         "fear_greed_score": raw.get("fear_greed_score"),
         "fear_greed_rating": raw.get("fear_greed_rating"),
         "fear_greed_signal": raw.get("fear_greed_signal"),
+        # Data source timestamps
+        "sp500_data_ts": raw.get("sp500_data_ts"),
+        "us_data_ts": raw.get("us_data_ts"),
+        "nifty_data_ts": raw.get("nifty_data_ts"),
+        "gift_data_ts": raw.get("gift_data_ts"),
+        "fg_data_ts": raw.get("fg_data_ts"),
+        "vix_data_ts": raw.get("vix_data_ts"),
         # Computed features
         "fii_zscore": features.get("fii_zscore"),
         "fii_surprise": features.get("fii_surprise"),
@@ -367,21 +374,29 @@ with col3:
     ]
     st.dataframe(pd.DataFrame(breakdown_data), hide_index=True, height=390)
 
-# --- Format fetch timestamp ---
-fetch_ts = latest.get('fetch_timestamp', '')
-if fetch_ts:
+# --- Helper function to format data timestamps ---
+def format_data_ts(ts_str):
+    """Format a data timestamp string for display."""
+    if not ts_str:
+        return "N/A"
     try:
-        fetch_dt = datetime.fromisoformat(fetch_ts)
-        fetch_time_str = fetch_dt.strftime("%d %b %Y, %I:%M %p")
+        # Handle both datetime and date-only formats
+        if " " in ts_str:
+            dt = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
+            return dt.strftime("%d %b %Y, %I:%M %p")
+        else:
+            dt = datetime.strptime(ts_str, "%Y-%m-%d")
+            return dt.strftime("%d %b %Y")
     except:
-        fetch_time_str = fetch_ts[:19]
-else:
-    fetch_time_str = "N/A"
+        return ts_str[:19] if len(ts_str) > 19 else ts_str
 
 # --- Global Market Indicators ---
 st.markdown("---")
 st.subheader("Global & Market Indicators")
-st.caption(f"Fetched: {fetch_time_str}")
+# Show data timestamps for global indicators
+us_ts = format_data_ts(latest.get("us_data_ts"))
+fg_ts = format_data_ts(latest.get("fg_data_ts"))
+st.caption(f"US Markets: {us_ts} | Fear & Greed: {fg_ts}")
 glob_col1, glob_col2, glob_col3, glob_col4 = st.columns(4)
 
 with glob_col1:
@@ -430,7 +445,10 @@ try:
 except:
     formatted_date = data_date
 st.subheader(f"Institutional Indicators — {formatted_date}")
-st.caption(f"Fetched: {fetch_time_str}")
+# Show data timestamps for institutional indicators
+vix_ts = format_data_ts(latest.get("vix_data_ts"))
+sp500_ts = format_data_ts(latest.get("sp500_data_ts"))
+st.caption(f"NSE Data: {formatted_date} | VIX: {vix_ts} | S&P 500: {sp500_ts}")
 ind_col1, ind_col2, ind_col3 = st.columns(3)
 
 with ind_col1:
@@ -462,7 +480,8 @@ with ind_col3:
 # --- NIFTY Technical ---
 st.markdown("---")
 st.subheader("NIFTY Technical")
-st.caption(f"Fetched: {fetch_time_str}")
+nifty_ts = format_data_ts(latest.get("nifty_data_ts"))
+st.caption(f"Data as of: {nifty_ts}")
 tech_col1, tech_col2, tech_col3, tech_col4 = st.columns(4)
 
 with tech_col1:
