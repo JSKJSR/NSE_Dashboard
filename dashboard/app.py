@@ -450,21 +450,24 @@ with ind_col1:
     fii_net = latest.get("fii_net")
     dii_net = latest.get("dii_net")
     fii_buying = (fii_net or 0) > 0
-    st.metric("FII Net (Cash)", f"{fii_net:,.0f} Cr" if fii_net else "N/A",
-              delta="▲ Buying" if fii_buying else "▼ Selling",
-              delta_color="normal" if fii_buying else "inverse")
+    st.metric("FII Net (Cash)", f"{fii_net:,.0f} Cr" if fii_net else "N/A")
+    color = "green" if fii_buying else "red"
+    arrow = "▲ Buying" if fii_buying else "▼ Selling"
+    st.markdown(f"<span style='color:{color};font-size:0.85em'>{arrow}</span>", unsafe_allow_html=True)
     dii_buying = (dii_net or 0) > 0
-    st.metric("DII Net (Cash)", f"{dii_net:,.0f} Cr" if dii_net else "N/A",
-              delta="▲ Buying" if dii_buying else "▼ Selling",
-              delta_color="normal" if dii_buying else "inverse")
+    st.metric("DII Net (Cash)", f"{dii_net:,.0f} Cr" if dii_net else "N/A")
+    color = "green" if dii_buying else "red"
+    arrow = "▲ Buying" if dii_buying else "▼ Selling"
+    st.markdown(f"<span style='color:{color};font-size:0.85em'>{arrow}</span>", unsafe_allow_html=True)
 
 with ind_col2:
     net_oi = latest.get("fii_net_oi")
     pcr_val = latest.get("pcr")
     oi_long = (net_oi or 0) > 0
-    st.metric("FII Futures OI (Net)", f"{net_oi:,}" if net_oi else "N/A",
-              delta="▲ Long" if oi_long else "▼ Short",
-              delta_color="normal" if oi_long else "inverse")
+    st.metric("FII Futures OI (Net)", f"{net_oi:,}" if net_oi else "N/A")
+    color = "green" if oi_long else "red"
+    arrow = "▲ Long" if oi_long else "▼ Short"
+    st.markdown(f"<span style='color:{color};font-size:0.85em'>{arrow}</span>", unsafe_allow_html=True)
     st.metric("PCR (Near Expiry)", f"{pcr_val:.3f}" if pcr_val else "N/A")
 
 with ind_col3:
