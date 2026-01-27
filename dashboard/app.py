@@ -449,19 +449,22 @@ ind_col1, ind_col2, ind_col3 = st.columns(3)
 with ind_col1:
     fii_net = latest.get("fii_net")
     dii_net = latest.get("dii_net")
+    fii_buying = (fii_net or 0) > 0
     st.metric("FII Net (Cash)", f"{fii_net:,.0f} Cr" if fii_net else "N/A",
-              delta="Buying" if (fii_net or 0) > 0 else "Selling",
-              delta_color="normal" if (fii_net or 0) > 0 else "inverse")
+              delta="▲ Buying" if fii_buying else "▼ Selling",
+              delta_color="normal" if fii_buying else "inverse")
+    dii_buying = (dii_net or 0) > 0
     st.metric("DII Net (Cash)", f"{dii_net:,.0f} Cr" if dii_net else "N/A",
-              delta="Buying" if (dii_net or 0) > 0 else "Selling",
-              delta_color="normal" if (dii_net or 0) > 0 else "inverse")
+              delta="▲ Buying" if dii_buying else "▼ Selling",
+              delta_color="normal" if dii_buying else "inverse")
 
 with ind_col2:
     net_oi = latest.get("fii_net_oi")
     pcr_val = latest.get("pcr")
+    oi_long = (net_oi or 0) > 0
     st.metric("FII Futures OI (Net)", f"{net_oi:,}" if net_oi else "N/A",
-              delta="Long" if (net_oi or 0) > 0 else "Short",
-              delta_color="normal" if (net_oi or 0) > 0 else "inverse")
+              delta="▲ Long" if oi_long else "▼ Short",
+              delta_color="normal" if oi_long else "inverse")
     st.metric("PCR (Near Expiry)", f"{pcr_val:.3f}" if pcr_val else "N/A")
 
 with ind_col3:
