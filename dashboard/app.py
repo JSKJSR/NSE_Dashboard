@@ -532,6 +532,18 @@ else:
     )
     st.plotly_chart(fig, use_container_width=True)
 
+# --- Market Intelligence Widget ---
+st.markdown("---")
+st.subheader("📡 Market Intelligence")
+
+try:
+    from intelligence.widget import render_intelligence_widget
+    render_intelligence_widget()
+except ImportError as e:
+    st.info("Market Intelligence module not available. Install dependencies: pip install feedparser vaderSentiment")
+except Exception as e:
+    st.warning(f"Market Intelligence temporarily unavailable: {e}")
+
 # --- Footer ---
 st.markdown("---")
 st.caption(
