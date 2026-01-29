@@ -30,11 +30,29 @@ from storage.queries import get_latest_row, get_last_n_days, date_exists
 st.set_page_config(
     page_title="NIFTY Bias Dashboard",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # Initialize DB (creates tables if needed)
 init_db()
+
+# --- Responsive CSS ---
+st.markdown("""
+<style>
+/* Make right panel sticky on scroll */
+[data-testid="column"]:last-child {
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    max-height: 100vh;
+    overflow-y: auto;
+}
+/* Responsive: stack columns on mobile */
+@media (max-width: 768px) {
+    [data-testid="column"] { width: 100% !important; flex: 1 1 100% !important; }
+}
+</style>
+""", unsafe_allow_html=True)
 
 
 # --- Data Fetch Function ---
@@ -263,19 +281,6 @@ if st.sidebar.button("Fetch Now", type="primary", use_container_width=True):
     except Exception as e:
         st.sidebar.error(f"Fetch failed: {e}")
 
-# --- Market Intelligence Widget (Sidebar) ---
-st.sidebar.markdown("---")
-st.sidebar.subheader("📡 Market Intelligence")
-
-try:
-    from intelligence.widget import render_compact_widget
-    with st.sidebar:
-        render_compact_widget()
-except ImportError as e:
-    st.sidebar.info("Install: pip install feedparser vaderSentiment")
-except Exception as e:
-    st.sidebar.caption(f"Intel unavailable: {e}")
-
 if refresh_seconds > 0:
     st.rerun()
 
@@ -310,7 +315,7 @@ def signal_arrow(value, bull_thresh, bear_thresh) -> str:
     return "0"
 
 
-# --- Main Content ---
+# --- Main Layout: Two Columns ---
 st.title("NIFTY Daily Institutional Bias Dashboard")
 
 latest = get_latest_row()
@@ -330,48 +335,58 @@ if latest is None:
             st.error(f"Fetch failed: {e}")
     st.stop()
 
-# --- Current Bias Display ---
-st.markdown("---")
-col1, col2, col3 = st.columns([1, 2, 2])
+# Create two-column layout: Main (75%) | Intelligence (25%)
+main_col, intel_col = st.columns([3, 1], gap="medium")
 
-with col1:
+# --- Right Column: Market Intelligence (renders first for sticky positioning) ---
+with intel_col:
+    st.markdown("### 📡 Market Intel")
+    try:
+        from intelligence.widget import render_compact_widget
+        render_compact_widget()
+    except ImportError:
+        st.info("Install: `pip install feedparser vaderSentiment`")
+    except Exception as e:
+        st.caption(f"Unavailable: {e}")
+
+# --- Helper function to format data dates ---
+def format_data_date(date_str):
+    """Format a data date string (YYYY-MM-DD) for display."""
+    if not date_str:
+        return "N/A"
+    try:
+        dt = datetime.strptime(date_str[:10], "%Y-%m-%d")
+        return dt.strftime("%d %b %Y")
+    except:
+        return date_str
+
+# --- Left Column: Main Dashboard Content ---
+with main_col:
+    # Current Bias Display
     score = latest.get("bias_score", 0) or 0
     label = latest.get("bias_label", "Unknown")
     color = bias_color(label)
+    data_date = latest.get('date', 'N/A')
 
-    st.markdown(
-        f"""
-        <div style="text-align:center; padding:20px;">
-            <h1 style="color:{color}; font-size:64px; margin:0;">{score:+d}</h1>
+    bcol1, bcol2 = st.columns([1, 2])
+    with bcol1:
+        st.markdown(f"""
+        <div style="text-align:center; padding:15px;">
+            <h1 style="color:{color}; font-size:56px; margin:0;">{score:+d}</h1>
             <h3 style="color:{color}; margin:5px 0;">{label}</h3>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-with col2:
-    st.markdown(f"**Guidance:** {latest.get('bias_guidance', 'N/A')}")
-    data_date = latest.get('date', 'N/A')
-    try:
-        data_date_obj = datetime.strptime(data_date, "%Y-%m-%d")
-        data_date_formatted = data_date_obj.strftime("%A, %d %b %Y")
-    except:
-        data_date_formatted = data_date
-    st.markdown(f"**Data Date:** {data_date_formatted}")
-    fetch_ts_raw = latest.get('fetch_timestamp', '')
-    if fetch_ts_raw:
+        """, unsafe_allow_html=True)
+    with bcol2:
+        st.markdown(f"**Guidance:** {latest.get('bias_guidance', 'N/A')}")
         try:
-            fetch_dt_main = datetime.fromisoformat(fetch_ts_raw)
-            fetch_formatted = fetch_dt_main.strftime("%d %b %Y, %I:%M:%S %p")
+            data_date_formatted = datetime.strptime(data_date, "%Y-%m-%d").strftime("%A, %d %b %Y")
         except:
-            fetch_formatted = fetch_ts_raw[:19]
-        st.markdown(f"**Fetched:** {fetch_formatted}")
-    if data_date != today_str:
-        st.info(f"Showing last available data (market may be closed)")
-    if latest.get("data_complete") == 0:
-        st.warning("Some data sources failed. Bias may be less reliable.")
+            data_date_formatted = data_date
+        st.markdown(f"**Data Date:** {data_date_formatted}")
+        if data_date != today_str:
+            st.caption("Showing last available data (market may be closed)")
 
-with col3:
+    # Score Breakdown
     st.markdown("**Score Breakdown (10 Components)**")
     breakdown_data = [
         {"Component": "FII Z-score", "Value": f"{latest.get('fii_zscore', 0) or 0:.2f}", "Signal": signal_arrow(latest.get("fii_zscore"), 1.0, -1.0)},
@@ -385,171 +400,70 @@ with col3:
         {"Component": "NIFTY Trend", "Value": f"{latest.get('nifty_5d_chg', 0) or 0:.2f}%", "Signal": latest.get("nifty_trend", "N/A")},
         {"Component": "Fear & Greed", "Value": f"{latest.get('fear_greed_score', 0) or 0:.0f}", "Signal": latest.get("fear_greed_rating", "N/A")},
     ]
-    st.dataframe(pd.DataFrame(breakdown_data), hide_index=True, height=390)
+    st.dataframe(pd.DataFrame(breakdown_data), hide_index=True, use_container_width=True)
 
-# --- Helper function to format data dates ---
-def format_data_date(date_str):
-    """Format a data date string (YYYY-MM-DD) for display."""
-    if not date_str:
-        return "N/A"
-    try:
-        dt = datetime.strptime(date_str[:10], "%Y-%m-%d")
-        return dt.strftime("%d %b %Y")
-    except:
-        return date_str
+    # Global Market Indicators
+    st.markdown("---")
+    st.subheader("Global & Market Indicators")
+    g1, g2, g3, g4 = st.columns(4)
+    with g1:
+        gift_sent = latest.get("gift_sentiment", "N/A")
+        st.metric("GIFT Nifty", f"{latest.get('gift_gap_pct', 0) or 0:+.2f}%", delta=gift_sent,
+                  delta_color="normal" if gift_sent == "Positive" else ("inverse" if gift_sent == "Negative" else "off"))
+    with g2:
+        us_sent = latest.get("us_sentiment", "N/A")
+        st.metric("US Markets", f"{latest.get('us_avg_chg', 0) or 0:+.2f}%", delta=us_sent,
+                  delta_color="normal" if us_sent == "Positive" else ("inverse" if us_sent == "Negative" else "off"))
+    with g3:
+        fg_score = latest.get("fear_greed_score")
+        st.metric("Fear & Greed", f"{fg_score:.0f}" if fg_score else "N/A",
+                  delta=latest.get("fear_greed_rating", "").title() or None, delta_color="off")
+    with g4:
+        st.metric("NIFTY (5D)", f"{latest.get('nifty_5d_chg', 0) or 0:+.2f}%",
+                  delta=f"RSI: {latest.get('nifty_rsi', 50):.0f}", delta_color="off")
 
-# --- Global Market Indicators ---
-st.markdown("---")
-st.subheader("Global & Market Indicators")
-# Show data dates for global indicators
-us_date = format_data_date(latest.get("us_data_date"))
-fg_date = format_data_date(latest.get("fg_data_date"))
-st.caption(f"US Markets: {us_date} | Fear & Greed: {fg_date}")
-glob_col1, glob_col2, glob_col3, glob_col4 = st.columns(4)
+    # Institutional Indicators
+    st.markdown("---")
+    st.subheader("Institutional Indicators")
+    i1, i2, i3 = st.columns(3)
+    with i1:
+        fii_net = latest.get("fii_net")
+        st.metric("FII Net", f"{fii_net:,.0f} Cr" if fii_net else "N/A")
+        st.markdown(f"<span style='color:{'green' if (fii_net or 0) > 0 else 'red'};font-size:0.85em'>{'▲ Buying' if (fii_net or 0) > 0 else '▼ Selling'}</span>", unsafe_allow_html=True)
+        dii_net = latest.get("dii_net")
+        st.metric("DII Net", f"{dii_net:,.0f} Cr" if dii_net else "N/A")
+        st.markdown(f"<span style='color:{'green' if (dii_net or 0) > 0 else 'red'};font-size:0.85em'>{'▲ Buying' if (dii_net or 0) > 0 else '▼ Selling'}</span>", unsafe_allow_html=True)
+    with i2:
+        net_oi = latest.get("fii_net_oi")
+        st.metric("FII Futures OI", f"{net_oi:,}" if net_oi else "N/A")
+        st.markdown(f"<span style='color:{'green' if (net_oi or 0) > 0 else 'red'};font-size:0.85em'>{'▲ Long' if (net_oi or 0) > 0 else '▼ Short'}</span>", unsafe_allow_html=True)
+        st.metric("PCR", f"{latest.get('pcr', 0):.3f}" if latest.get("pcr") else "N/A")
+    with i3:
+        vix_val = latest.get("vix")
+        st.metric("India VIX", f"{vix_val:.2f}" if vix_val else "N/A",
+                  delta="High Vol" if (vix_val or 0) > 15 else "Normal",
+                  delta_color="inverse" if (vix_val or 0) > 15 else "off")
+        st.metric("S&P 500", f"{latest.get('sp500_change_pct', 0) or 0:+.2f}%")
 
-with glob_col1:
-    gift_sent = latest.get("gift_sentiment", "N/A")
-    st.metric(
-        "GIFT Nifty (Est. Gap)",
-        f"{latest.get('gift_gap_pct', 0) or 0:+.2f}%",
-        delta=gift_sent,
-        delta_color="normal" if gift_sent == "Positive" else ("inverse" if gift_sent == "Negative" else "off")
-    )
-
-with glob_col2:
-    us_sent = latest.get("us_sentiment", "N/A")
-    st.metric(
-        "US Markets",
-        f"{latest.get('us_avg_chg', 0) or 0:+.2f}%",
-        delta=us_sent,
-        delta_color="normal" if us_sent == "Positive" else ("inverse" if us_sent == "Negative" else "off")
-    )
-
-with glob_col3:
-    fg_score = latest.get("fear_greed_score")
-    fg_rating = latest.get("fear_greed_rating", "N/A")
-    st.metric(
-        "Fear & Greed",
-        f"{fg_score:.0f}" if fg_score else "N/A",
-        delta=fg_rating.title() if fg_rating else None,
-        delta_color="off"
-    )
-
-with glob_col4:
-    nifty_trend = latest.get("nifty_trend", "N/A")
-    rsi = latest.get("nifty_rsi")
-    st.metric(
-        "NIFTY Trend (5D)",
-        f"{latest.get('nifty_5d_chg', 0) or 0:+.2f}%",
-        delta=f"RSI: {rsi:.0f}" if rsi else nifty_trend,
-        delta_color="off"
-    )
-
-# --- Institutional Indicators ---
-st.markdown("---")
-try:
-    date_obj = datetime.strptime(data_date, "%Y-%m-%d")
-    formatted_date = date_obj.strftime("%A, %d %b %Y")
-except:
-    formatted_date = data_date
-st.subheader(f"Institutional Indicators — {formatted_date}")
-# Show data dates for institutional indicators
-vix_date = format_data_date(latest.get("vix_data_date"))
-sp500_date = format_data_date(latest.get("sp500_data_date"))
-st.caption(f"NSE Data: {formatted_date} | VIX: {vix_date} | S&P 500: {sp500_date}")
-ind_col1, ind_col2, ind_col3 = st.columns(3)
-
-with ind_col1:
-    fii_net = latest.get("fii_net")
-    dii_net = latest.get("dii_net")
-    fii_buying = (fii_net or 0) > 0
-    st.metric("FII Net (Cash)", f"{fii_net:,.0f} Cr" if fii_net else "N/A")
-    color = "green" if fii_buying else "red"
-    arrow = "▲ Buying" if fii_buying else "▼ Selling"
-    st.markdown(f"<span style='color:{color};font-size:0.85em'>{arrow}</span>", unsafe_allow_html=True)
-    dii_buying = (dii_net or 0) > 0
-    st.metric("DII Net (Cash)", f"{dii_net:,.0f} Cr" if dii_net else "N/A")
-    color = "green" if dii_buying else "red"
-    arrow = "▲ Buying" if dii_buying else "▼ Selling"
-    st.markdown(f"<span style='color:{color};font-size:0.85em'>{arrow}</span>", unsafe_allow_html=True)
-
-with ind_col2:
-    net_oi = latest.get("fii_net_oi")
-    pcr_val = latest.get("pcr")
-    oi_long = (net_oi or 0) > 0
-    st.metric("FII Futures OI (Net)", f"{net_oi:,}" if net_oi else "N/A")
-    color = "green" if oi_long else "red"
-    arrow = "▲ Long" if oi_long else "▼ Short"
-    st.markdown(f"<span style='color:{color};font-size:0.85em'>{arrow}</span>", unsafe_allow_html=True)
-    st.metric("PCR (Near Expiry)", f"{pcr_val:.3f}" if pcr_val else "N/A")
-
-with ind_col3:
-    vix_val = latest.get("vix")
-    sp_chg = latest.get("sp500_change_pct")
-    st.metric("India VIX", f"{vix_val:.2f}" if vix_val else "N/A",
-              delta="High Vol" if (vix_val or 0) > 15 else "Normal",
-              delta_color="inverse" if (vix_val or 0) > 15 else "off")
-    st.metric("S&P 500 Change", f"{sp_chg:+.2f}%" if sp_chg else "N/A")
-
-# --- NIFTY Technical ---
-st.markdown("---")
-st.subheader("NIFTY Technical")
-nifty_date = format_data_date(latest.get("nifty_data_date"))
-st.caption(f"Data as of: {nifty_date}")
-tech_col1, tech_col2, tech_col3, tech_col4 = st.columns(4)
-
-with tech_col1:
-    st.metric("NIFTY 50", f"{latest.get('nifty_price', 0) or 0:,.2f}")
-with tech_col2:
-    st.metric("5-Day Change", f"{latest.get('nifty_5d_chg', 0) or 0:+.2f}%")
-with tech_col3:
-    st.metric("20-Day Change", f"{latest.get('nifty_20d_chg', 0) or 0:+.2f}%")
-with tech_col4:
-    rsi = latest.get("nifty_rsi", 50)
-    rsi_label = "Oversold" if rsi < 30 else ("Overbought" if rsi > 70 else "Normal")
-    st.metric("RSI (14)", f"{rsi:.1f}", delta=rsi_label,
-              delta_color="normal" if rsi < 30 else ("inverse" if rsi > 70 else "off"))
-
-# --- Historical Chart ---
-st.markdown("---")
-st.subheader(f"Bias Score — Last {chart_days} Days")
-
-history = get_last_n_days(chart_days)
-
-if history.empty or len(history) < 2:
-    st.info("Not enough historical data for chart. Run the daily runner for more days.")
-else:
-    fig = go.Figure()
-    colors = history["bias_score"].apply(
-        lambda x: "#00C853" if x >= 2 else ("#D32F2F" if x <= -2 else "#9E9E9E")
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=history["date"],
-            y=history["bias_score"],
-            mode="lines+markers",
+    # Historical Chart
+    st.markdown("---")
+    st.subheader(f"Bias Score — Last {chart_days} Days")
+    history = get_last_n_days(chart_days)
+    if history.empty or len(history) < 2:
+        st.info("Not enough historical data. Fetch data on multiple trading days to build history.")
+    else:
+        fig = go.Figure()
+        colors = history["bias_score"].apply(lambda x: "#00C853" if x >= 2 else ("#D32F2F" if x <= -2 else "#9E9E9E"))
+        fig.add_trace(go.Scatter(x=history["date"], y=history["bias_score"], mode="lines+markers",
             line=dict(width=2, color="#42A5F5"),
             marker=dict(color=colors.tolist(), size=9, line=dict(width=1, color="white")),
-            hovertemplate="Date: %{x}<br>Score: %{y}<extra></extra>",
-        )
-    )
-    fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
-    fig.add_hrect(y0=2, y1=8, fillcolor="green", opacity=0.05)
-    fig.add_hrect(y0=-8, y1=-2, fillcolor="red", opacity=0.05)
-    fig.update_layout(
-        yaxis_title="Bias Score",
-        xaxis_title="Date",
-        height=380,
-        margin=dict(l=40, r=20, t=20, b=40),
-        yaxis=dict(range=[-10, 10], dtick=2),
-    )
-    st.plotly_chart(fig, use_container_width=True)
+            hovertemplate="Date: %{x}<br>Score: %{y}<extra></extra>"))
+        fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
+        fig.add_hrect(y0=2, y1=8, fillcolor="green", opacity=0.05)
+        fig.add_hrect(y0=-8, y1=-2, fillcolor="red", opacity=0.05)
+        fig.update_layout(yaxis_title="Bias Score", xaxis_title="Date", height=300,
+            margin=dict(l=40, r=20, t=20, b=40), yaxis=dict(range=[-10, 10], dtick=2))
+        st.plotly_chart(fig, use_container_width=True)
 
-# --- Footer ---
-st.markdown("---")
-st.caption(
-    "Data: NSE India, Yahoo Finance, CNN Fear & Greed | "
-    "10 components: FII Z-score, FII Surprise, Futures OI, PCR, VIX, S&P 500, GIFT Nifty, US Markets, NIFTY Trend, Fear & Greed | "
-    "Bias is a directional filter, not an entry signal | "
-    "Not investment advice"
-)
+    # Footer
+    st.caption("Data: NSE India, Yahoo Finance, CNN Fear & Greed | Not investment advice")
