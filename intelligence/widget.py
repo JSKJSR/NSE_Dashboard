@@ -236,27 +236,65 @@ def render_compact_widget():
     """
     Render a compact version of the widget for sidebar or small spaces.
     """
-    storage = get_storage()
-    events = storage.get_recent_events(limit=5, hours=12)
+    # Refresh button
+    if st.button("🔄 Refresh News", key="intel_sidebar_refresh", use_container_width=True):
+        _fetch_and_process_news()
+        st.rerun()
 
-    st.markdown("#### 📡 Market Intel")
+    # Get events from storage
+    storage = get_storage()
+    events = storage.get_recent_events(limit=8, hours=24)
 
     if not events:
-        st.caption("No recent events")
+        st.caption("No recent events. Click refresh to fetch news.")
         return
 
     # Show critical count
     critical_count = sum(1 for e in events if e["priority_level"] == "CRITICAL")
+    high_count = sum(1 for e in events if e["priority_level"] == "HIGH")
+
     if critical_count > 0:
-        st.markdown(f"🔴 **{critical_count} Critical Alert(s)**")
+        st.error(f"🔴 {critical_count} Critical Alert(s)")
+    if high_count > 0:
+        st.warning(f"🟠 {high_count} High Priority")
 
-    # Show top events
-    for event in events[:5]:
-        emoji = event.get("emoji", "⚪")
-        st.markdown(f"{emoji} {event['headline'][:60]}...")
+    st.caption(f"Total: {len(events)} events (24h)")
 
-    if st.button("View All", key="view_all_intel"):
-        st.session_state.show_intel_page = True
+    # Show top events with better formatting
+    st.markdown("---")
+    for event in events[:6]:
+        priority_level = event.get("priority_level", "LOW")
+        sentiment = event.get("sentiment", {})
+        sent_score = sentiment.get("score", 0)
+
+        # Color based on priority
+        if priority_level == "CRITICAL":
+            color = "🔴"
+        elif priority_level == "HIGH":
+            color = "🟠"
+        elif priority_level == "MEDIUM":
+            color = "🟡"
+        else:
+            color = "⚪"
+
+        # Sentiment indicator
+        if sent_score > 0.1:
+            sent = "📈"
+        elif sent_score < -0.1:
+            sent = "📉"
+        else:
+            sent = ""
+
+        headline = event.get('headline', '')[:55]
+        st.markdown(f"{color} {sent} {headline}...")
+
+        # Show category in small text
+        st.caption(f"└ {event.get('category', 'GENERAL')} | {event.get('source', '')}")
+
+    # Last update time
+    if "intel_last_update" in st.session_state:
+        st.markdown("---")
+        st.caption(f"Updated: {st.session_state.intel_last_update}")
 
 
 def render_intelligence_page():

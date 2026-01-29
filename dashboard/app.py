@@ -30,7 +30,7 @@ from storage.queries import get_latest_row, get_last_n_days, date_exists
 st.set_page_config(
     page_title="NIFTY Bias Dashboard",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # Initialize DB (creates tables if needed)
@@ -262,6 +262,19 @@ if st.sidebar.button("Fetch Now", type="primary", use_container_width=True):
         st.rerun()
     except Exception as e:
         st.sidebar.error(f"Fetch failed: {e}")
+
+# --- Market Intelligence Widget (Sidebar) ---
+st.sidebar.markdown("---")
+st.sidebar.subheader("📡 Market Intelligence")
+
+try:
+    from intelligence.widget import render_compact_widget
+    with st.sidebar:
+        render_compact_widget()
+except ImportError as e:
+    st.sidebar.info("Install: pip install feedparser vaderSentiment")
+except Exception as e:
+    st.sidebar.caption(f"Intel unavailable: {e}")
 
 if refresh_seconds > 0:
     st.rerun()
@@ -531,18 +544,6 @@ else:
         yaxis=dict(range=[-10, 10], dtick=2),
     )
     st.plotly_chart(fig, use_container_width=True)
-
-# --- Market Intelligence Widget ---
-st.markdown("---")
-st.subheader("📡 Market Intelligence")
-
-try:
-    from intelligence.widget import render_intelligence_widget
-    render_intelligence_widget()
-except ImportError as e:
-    st.info("Market Intelligence module not available. Install dependencies: pip install feedparser vaderSentiment")
-except Exception as e:
-    st.warning(f"Market Intelligence temporarily unavailable: {e}")
 
 # --- Footer ---
 st.markdown("---")
