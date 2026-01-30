@@ -51,7 +51,14 @@ class NewsFetcher:
         news_items = []
 
         try:
-            feed = feedparser.parse(feed_url)
+            # Use requests with User-Agent to avoid being blocked
+            response = requests.get(
+                feed_url,
+                timeout=10,
+                headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'}
+            )
+            response.raise_for_status()
+            feed = feedparser.parse(response.content)
 
             for entry in feed.entries[:20]:  # Limit to 20 per source
                 # Extract timestamp
