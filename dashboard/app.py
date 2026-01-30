@@ -340,6 +340,17 @@ main_col, intel_col = st.columns([3, 1], gap="medium")
 
 # --- Right Column: Market Intelligence (renders first for sticky positioning) ---
 with intel_col:
+    # Grok X Trends Widget (above Market Intel)
+    try:
+        from intelligence.grok_widget import render_compact_grok_widget
+        render_compact_grok_widget()
+        st.markdown("---")
+    except ImportError:
+        pass  # xai-sdk not installed, skip silently
+    except Exception as e:
+        st.caption(f"X Trends unavailable: {e}")
+
+    # Market Intel Widget
     st.markdown("### 📡 Market Intel")
     try:
         from intelligence.widget import render_compact_widget
