@@ -287,15 +287,20 @@ def render_compact_widget():
 
         headline = event.get('headline', '')[:55]
         url = event.get('url', '')
+        source = event.get('source', '')
+        category = event.get('category', 'GENERAL')
 
         # Display headline with priority/sentiment indicators
         st.markdown(f"{color} {sent} {headline}...")
 
-        # Show category and clickable link on same line
+        # Show category and clickable source link using HTML
         if url:
-            st.caption(f"└ {event.get('category', 'GENERAL')} | [{event.get('source', '')} ↗]({url})")
+            st.markdown(
+                f'<p style="font-size:0.8em;color:#888;margin:0 0 10px 0;">└ {category} | <a href="{url}" target="_blank" style="color:#1E90FF;">{source} ↗</a></p>',
+                unsafe_allow_html=True
+            )
         else:
-            st.caption(f"└ {event.get('category', 'GENERAL')} | {event.get('source', '')}")
+            st.markdown(f'<p style="font-size:0.8em;color:#888;margin:0 0 10px 0;">└ {category} | {source}</p>', unsafe_allow_html=True)
 
     # Last update time
     if "intel_last_update" in st.session_state:
