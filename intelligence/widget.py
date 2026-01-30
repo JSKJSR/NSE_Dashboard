@@ -292,11 +292,10 @@ def render_compact_widget():
 
         # Display headline with priority/sentiment indicators and category
         st.markdown(f"{color} {sent} {headline}...")
-        st.caption(f"└ {category} | {source}")
 
-        # Add clickable link button if URL exists
+        # Show category, source, and link arrow on same line
         if url:
-            st.link_button("Read article ↗", url, use_container_width=True)
+            st.caption(f"└ {category} | [{source} ↗]({url})")
 
     # Last update time
     if "intel_last_update" in st.session_state:
