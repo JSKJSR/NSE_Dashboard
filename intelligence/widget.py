@@ -288,9 +288,12 @@ def render_compact_widget():
         headline = event.get('headline', '')[:55]
         url = event.get('url', '')
 
-        # Make headline clickable if URL exists
+        # Make headline clickable if URL exists (use HTML for proper link behavior)
         if url:
-            st.markdown(f"{color} {sent} [{headline}...]({url})")
+            st.markdown(
+                f'{color} {sent} <a href="{url}" target="_blank" style="text-decoration:none;color:inherit;">{headline}...</a>',
+                unsafe_allow_html=True
+            )
         else:
             st.markdown(f"{color} {sent} {headline}...")
 
