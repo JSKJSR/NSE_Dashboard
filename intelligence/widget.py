@@ -286,7 +286,13 @@ def render_compact_widget():
             sent = ""
 
         headline = event.get('headline', '')[:55]
-        st.markdown(f"{color} {sent} {headline}...")
+        url = event.get('url', '')
+
+        # Make headline clickable if URL exists
+        if url:
+            st.markdown(f"{color} {sent} [{headline}...]({url})")
+        else:
+            st.markdown(f"{color} {sent} {headline}...")
 
         # Show category in small text
         st.caption(f"└ {event.get('category', 'GENERAL')} | {event.get('source', '')}")
