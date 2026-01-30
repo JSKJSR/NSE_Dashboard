@@ -285,22 +285,18 @@ def render_compact_widget():
         else:
             sent = ""
 
-        headline = event.get('headline', '')[:55]
+        headline = event.get('headline', '')[:50]
         url = event.get('url', '')
         source = event.get('source', '')
         category = event.get('category', 'GENERAL')
 
-        # Display headline with priority/sentiment indicators
+        # Display headline with priority/sentiment indicators and category
         st.markdown(f"{color} {sent} {headline}...")
+        st.caption(f"└ {category} | {source}")
 
-        # Show category and clickable source link using HTML
+        # Add clickable link button if URL exists
         if url:
-            st.markdown(
-                f'<p style="font-size:0.8em;color:#888;margin:0 0 10px 0;">└ {category} | <a href="{url}" target="_blank" style="color:#1E90FF;">{source} ↗</a></p>',
-                unsafe_allow_html=True
-            )
-        else:
-            st.markdown(f'<p style="font-size:0.8em;color:#888;margin:0 0 10px 0;">└ {category} | {source}</p>', unsafe_allow_html=True)
+            st.link_button("Read article ↗", url, use_container_width=True)
 
     # Last update time
     if "intel_last_update" in st.session_state:
