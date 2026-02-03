@@ -415,7 +415,8 @@ with main_col:
 
     # Global Market Indicators
     st.markdown("---")
-    st.subheader("Global & Market Indicators")
+    global_data_date = latest.get('us_data_date') or latest.get('gift_data_date') or data_date
+    st.subheader(f"Global & Market Indicators — {format_data_date(global_data_date)}")
     g1, g2, g3, g4 = st.columns(4)
     with g1:
         gift_sent = latest.get("gift_sentiment", "N/A")
@@ -435,7 +436,7 @@ with main_col:
 
     # Institutional Indicators
     st.markdown("---")
-    st.subheader("Institutional Indicators")
+    st.subheader(f"Institutional Indicators — {format_data_date(data_date)}")
     i1, i2, i3 = st.columns(3)
     with i1:
         fii_net = latest.get("fii_net")
