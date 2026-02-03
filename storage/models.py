@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS daily_data (
     -- GIFT Nifty / Pre-market
     gift_nifty REAL,
     gift_gap_pct REAL,
+    gift_change_pct REAL,
     gift_sentiment TEXT,
 
     -- US Markets
@@ -86,6 +87,7 @@ CREATE TABLE IF NOT EXISTS daily_data (
 MIGRATION_NEW_COLUMNS = [
     ("gift_nifty", "REAL"),
     ("gift_gap_pct", "REAL"),
+    ("gift_change_pct", "REAL"),
     ("gift_sentiment", "TEXT"),
     ("us_sentiment", "TEXT"),
     ("us_avg_chg", "REAL"),

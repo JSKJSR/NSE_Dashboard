@@ -198,6 +198,7 @@ def fetch_and_store_data():
         # GIFT Nifty
         "gift_nifty": raw.get("gift_nifty"),
         "gift_gap_pct": raw.get("gift_gap_pct"),
+        "gift_change_pct": raw.get("gift_change_pct"),
         "gift_sentiment": raw.get("gift_sentiment"),
         # US Markets
         "us_sentiment": raw.get("us_sentiment"),
@@ -406,7 +407,7 @@ with main_col:
         {"Component": "PCR", "Value": f"{latest.get('pcr', 0):.3f}" if latest.get("pcr") else "N/A", "Signal": signal_arrow(latest.get("pcr"), 1.2, 0.7)},
         {"Component": "VIX", "Value": f"{latest.get('vix', 0):.1f}" if latest.get("vix") else "N/A", "Signal": "-1" if latest.get("vix_flag") else "0"},
         {"Component": "S&P 500", "Value": f"{latest.get('sp500_change_pct', 0) or 0:.2f}%", "Signal": f"{latest.get('sp500_direction', 0) or 0:+d}" if latest.get("global_risk_flag") else "0"},
-        {"Component": "GIFT Nifty", "Value": f"{latest.get('gift_gap_pct', 0) or 0:.2f}%", "Signal": latest.get("gift_sentiment", "N/A")},
+        {"Component": "GIFT Nifty", "Value": f"{latest.get('gift_change_pct', 0) or 0:+.2f}%", "Signal": latest.get("gift_sentiment", "N/A")},
         {"Component": "US Markets", "Value": f"{latest.get('us_avg_chg', 0) or 0:.2f}%", "Signal": latest.get("us_sentiment", "N/A")},
         {"Component": "NIFTY Trend", "Value": f"{latest.get('nifty_5d_chg', 0) or 0:.2f}%", "Signal": latest.get("nifty_trend", "N/A")},
         {"Component": "Fear & Greed", "Value": f"{latest.get('fear_greed_score', 0) or 0:.0f}", "Signal": latest.get("fear_greed_rating", "N/A")},
@@ -420,7 +421,7 @@ with main_col:
     g1, g2, g3, g4 = st.columns(4)
     with g1:
         gift_sent = latest.get("gift_sentiment", "N/A")
-        st.metric("GIFT Nifty", f"{latest.get('gift_gap_pct', 0) or 0:+.2f}%", delta=gift_sent,
+        st.metric("GIFT Nifty", f"{latest.get('gift_change_pct', 0) or 0:+.2f}%", delta=gift_sent,
                   delta_color="normal" if gift_sent == "Positive" else ("inverse" if gift_sent == "Negative" else "off"))
     with g2:
         us_sent = latest.get("us_sentiment", "N/A")
