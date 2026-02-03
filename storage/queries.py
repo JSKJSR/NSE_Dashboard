@@ -4,11 +4,18 @@ from storage.database import get_connection
 
 def insert_daily_row(data: dict):
     """Insert or replace a daily data row."""
-    columns = ", ".join(data.keys())
-    placeholders = ", ".join(["?"] * len(data))
-    sql = f"INSERT OR REPLACE INTO daily_data ({columns}) VALUES ({placeholders})"
     with get_connection() as conn:
-        conn.execute(sql, list(data.values()))
+        # Get existing columns in the table
+        cursor = conn.execute("PRAGMA table_info(daily_data)")
+        existing_cols = {row[1] for row in cursor.fetchall()}
+
+        # Filter data to only include existing columns
+        filtered_data = {k: v for k, v in data.items() if k in existing_cols}
+
+        columns = ", ".join(filtered_data.keys())
+        placeholders = ", ".join(["?"] * len(filtered_data))
+        sql = f"INSERT OR REPLACE INTO daily_data ({columns}) VALUES ({placeholders})"
+        conn.execute(sql, list(filtered_data.values()))
 
 
 def insert_fetch_log(date: str, source: str, status: str,
